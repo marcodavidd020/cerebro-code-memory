@@ -1,0 +1,15 @@
+# Cerebro brain (generated, per-repo)
+.cerebro/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# uv
+.python-version
+uv.lock

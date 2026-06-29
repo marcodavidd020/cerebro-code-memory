@@ -1,0 +1,7 @@
+{
+  "name": "cerebro",
+  "version": "0.1.0",
+  "description": "Persistent code-knowledge memory: auto-injects the project map at session start and keeps the index fresh as you edit. Pairs with the cerebro MCP server.",
+  "author": { "name": "cerebro" },
+  "hooks": "./hooks/hooks.json"
+}

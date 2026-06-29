@@ -1,0 +1,109 @@
+"""Batch summary generation (plan layer 2, warmed proactively).
+
+Generates English summaries for the most central files so even a first-time query
+is cheap, instead of waiting for sessions to fill them in lazily. Uses headless
+`claude -p` so it needs no API key — it rides the user's existing Claude Code auth.
+A cheap model (Haiku by default) keeps the one-time cost low.
+"""
+from __future__ import annotations
+
+import concurrent.futures as cf
+import os
+import shutil
+import subprocess
+
+from . import config as cfg
+from . import db, graph, summaries
+
+INSTRUCTION = (
+    "You are summarizing a source file for a code-navigation index. In 1-3 dense "
+    "sentences, in English, describe what this file does and its role in the system "
+    "(key responsibilities, important types/functions, how it fits in). Output ONLY "
+    "the summary text — no preamble, no markdown, no bullet points."
+)
+MAX_CHARS = 16000
+DEFAULT_MODEL = "claude-haiku-4-5"
+
+
+def _claude_bin() -> str:
+    return os.environ.get("CEREBRO_CLAUDE") or shutil.which("claude") or "claude"
+
+
+def summarize_one(config, rel: str, model: str) -> str | None:
+    """Generate a summary for one file via `claude -p`. Returns None on failure."""
+    abs_path = config.root / rel
+    try:
+        content = abs_path.read_text(encoding="utf-8", errors="ignore")[:MAX_CHARS]
+    except OSError:
+        return None
+    prompt = f"{INSTRUCTION}\n\nFile path: {rel}\n\n```\n{content}\n```\n"
+    try:
+        out = subprocess.run(
+            [_claude_bin(), "-p", "--model", model],
+            input=prompt,
+            capture_output=True,
+            text=True,
+            timeout=180,
+        )
+    except Exception:
+        return None
+    if out.returncode != 0:
+        return None
+    return out.stdout.strip() or None
+
+
+def select_central_missing(conn, limit: int, prefix: str | None = None) -> list[str]:
+    """Top files by dependency centrality that have no summary yet."""
+    have = {r["path"] for r in conn.execute("SELECT path FROM summaries")}
+    out = []
+    for path, _score in graph.rank(conn):
+        if path in have or cfg.Config.lang_for(path) is None:
+            continue
+        if prefix and not path.startswith(prefix):
+            continue
+        out.append(path)
+        if len(out) >= limit:
+            break
+    return out
+
+
+def run(config, conn, rels: list[str], model: str = DEFAULT_MODEL, workers: int = 4) -> dict:
+    """Summarize files in parallel (claude -p subprocesses), then record serially
+    (one sqlite writer). Returns a count of what was produced."""
+    produced: dict[str, str] = {}
+    with cf.ThreadPoolExecutor(max_workers=workers) as ex:
+        futs = {ex.submit(summarize_one, config, r, model): r for r in rels}
+        for fut in cf.as_completed(futs):
+            summary = fut.result()
+            if summary:
+                produced[futs[fut]] = summary
+    for rel, summary in produced.items():
+        summaries.record(conn, rel, summary, model=model)
+    return {"requested": len(rels), "summarized": len(produced)}
+
+
+def main():  # `cerebro-summarize` entry point
+    import argparse
+    import json
+
+    ap = argparse.ArgumentParser(description="Pre-generate Cerebro summaries via claude -p")
+    ap.add_argument("--limit", type=int, default=20, help="max files to summarize")
+    ap.add_argument("--model", default=DEFAULT_MODEL)
+    ap.add_argument("--prefix", default=None, help="only files under this path prefix")
+    ap.add_argument("--workers", type=int, default=4)
+    args = ap.parse_args()
+
+    config = cfg.Config.load()
+    conn = db.connect(config.db_path)
+    rels = select_central_missing(conn, args.limit, args.prefix)
+    if not rels:
+        print(json.dumps({"summarized": 0, "note": "nothing missing in scope"}))
+        return
+    result = run(config, conn, rels, model=args.model, workers=args.workers)
+    result["model"] = args.model
+    result["root"] = str(config.root)
+    print(json.dumps(result, indent=2))
+
+
+if __name__ == "__main__":
+    main()

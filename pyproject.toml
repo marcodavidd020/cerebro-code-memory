@@ -1,0 +1,40 @@
+[project]
+name = "cerebro"
+version = "0.1.0"
+description = "Persistent code-knowledge memory across AI chat sessions (MCP server)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.2.0",
+    "tree-sitter>=0.23",
+    "tree-sitter-language-pack>=0.7",
+    "networkx>=3.2",
+    "pathspec>=0.12",
+]
+
+[project.scripts]
+cerebro = "cerebro.cli:main"
+cerebro-index = "cerebro.indexer:main"
+cerebro-map = "cerebro.server:map_main"
+cerebro-recall = "cerebro.server:recall_main"
+cerebro-sync = "cerebro.gitsync:main"
+cerebro-summarize = "cerebro.summarizer:main"
+cerebro-embed = "cerebro.embeddings:main"
+cerebro-graph = "cerebro.viz:graph_main"
+cerebro-export-obsidian = "cerebro.viz:obsidian_main"
+
+[project.optional-dependencies]
+semantic = ["model2vec>=0.3", "numpy>=1.26"]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cerebro"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
