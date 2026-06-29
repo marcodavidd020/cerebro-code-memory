@@ -61,7 +61,7 @@ claude mcp add cerebro -- uvx cerebro-code-memory
 Or install the full **Claude Code plugin** (MCP server + session hooks + cerebro-first subagents):
 
 ```
-/plugin marketplace add marcodavidd020/cerebro-mcp
+/plugin marketplace add marcodavidd020/cerebro-code-memory
 /plugin install cerebro@cerebro
 ```
 

@@ -28,9 +28,9 @@ cerebro-graph = "cerebro.viz:graph_main"
 cerebro-export-obsidian = "cerebro.viz:obsidian_main"
 
 [project.urls]
-Homepage = "https://github.com/marcodavidd020/cerebro-mcp"
-Repository = "https://github.com/marcodavidd020/cerebro-mcp"
-Issues = "https://github.com/marcodavidd020/cerebro-mcp/issues"
+Homepage = "https://github.com/marcodavidd020/cerebro-code-memory"
+Repository = "https://github.com/marcodavidd020/cerebro-code-memory"
+Issues = "https://github.com/marcodavidd020/cerebro-code-memory/issues"
 
 [project.optional-dependencies]
 semantic = ["model2vec>=0.3", "numpy>=1.26"]
