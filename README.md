@@ -50,12 +50,30 @@ Three layers of "traces", cheapest first:
 | `cerebro_callers(name)` | Call sites of a symbol (who calls it, with enclosing fn + line). |
 | `cerebro_calls(path)` | Internal functions a file calls (outgoing call edges). |
 
+## Install
+
+**One command** (published on PyPI) — add the MCP server to Claude Code:
+
+```bash
+claude mcp add cerebro -- uvx cerebro-code-memory
+```
+
+Or install the full **Claude Code plugin** (MCP server + session hooks + cerebro-first subagents):
+
+```
+/plugin marketplace add marcodavidd020/cerebro-mcp
+/plugin install cerebro@cerebro
+```
+
+Requires Python ≥ 3.10. Point Cerebro at a repo with `CEREBRO_ROOT=/path/to/repo`; it
+also auto-detects the nearest ancestor `.cerebro/` brain (handy in monorepos).
+
 ## Quick start
 
 One command onboards any repo — it indexes and prints the exact registration line:
 
 ```bash
-uv tool install --from . cerebro          # installs the `cerebro` command globally
+uv tool install --from . cerebro          # installs the `cerebro` command globally (dev)
 cd /path/to/your/repo
 cerebro setup --summarize --embed          # index (+ warm summaries / semantic index), then prints next steps
 ```
