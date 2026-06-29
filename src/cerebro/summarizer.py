@@ -67,6 +67,23 @@ def select_central_missing(conn, limit: int, prefix: str | None = None) -> list[
     return out
 
 
+def select_stale(conn, limit: int, prefix: str | None = None) -> list[str]:
+    """Files whose cached summary went STALE (source changed since it was written).
+    Re-warming these is the 'auto-record' path: edits during a session leave their
+    summaries outdated, and select_central_missing skips them (they HAVE a summary).
+    Bounded by `limit`."""
+    out = []
+    for path in summaries.stale_summaries(conn):
+        if cfg.Config.lang_for(path) is None:
+            continue
+        if prefix and not path.startswith(prefix):
+            continue
+        out.append(path)
+        if len(out) >= limit:
+            break
+    return out
+
+
 def run(config, conn, rels: list[str], model: str = DEFAULT_MODEL, workers: int = 4) -> dict:
     """Summarize files in parallel (claude -p subprocesses), then record serially
     (one sqlite writer). Returns a count of what was produced."""
@@ -91,11 +108,19 @@ def main():  # `cerebro-summarize` entry point
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--prefix", default=None, help="only files under this path prefix")
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--stale", action="store_true",
+                    help="re-summarize summaries gone stale (file changed), then fill with missing")
     args = ap.parse_args()
 
     config = cfg.Config.load()
     conn = db.connect(config.db_path)
-    rels = select_central_missing(conn, args.limit, args.prefix)
+    if args.stale:
+        rels = select_stale(conn, args.limit, args.prefix)
+        seen = set(rels)
+        rels += [r for r in select_central_missing(conn, args.limit - len(rels), args.prefix)
+                 if r not in seen]
+    else:
+        rels = select_central_missing(conn, args.limit, args.prefix)
     if not rels:
         print(json.dumps({"summarized": 0, "note": "nothing missing in scope"}))
         return

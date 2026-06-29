@@ -153,7 +153,13 @@ def cmd_obsidian(args):
 def cmd_summarize(args):
     from . import summarizer
     config, conn = _ctx()
-    rels = summarizer.select_central_missing(conn, args.limit, args.prefix)
+    if getattr(args, "stale", False):
+        rels = summarizer.select_stale(conn, args.limit, args.prefix)
+        seen = set(rels)
+        rels += [r for r in summarizer.select_central_missing(conn, args.limit - len(rels), args.prefix)
+                 if r not in seen]
+    else:
+        rels = summarizer.select_central_missing(conn, args.limit, args.prefix)
     print(json.dumps(summarizer.run(config, conn, rels, workers=args.workers)))
 
 
@@ -320,6 +326,7 @@ def _build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("obsidian", help="export an Obsidian vault"); s.add_argument("-o", "--out")
     s = sub.add_parser("summarize", help="warm summaries via claude -p")
     s.add_argument("--limit", type=int, default=20); s.add_argument("--prefix"); s.add_argument("--workers", type=int, default=4)
+    s.add_argument("--stale", action="store_true", help="also re-summarize stale summaries (edited files)")
     sub.add_parser("embed", help="build the semantic index (needs --extra semantic)")
     s = sub.add_parser("impact", help="transitive blast radius of a file"); s.add_argument("path")
     sub.add_parser("cycles", help="circular-import groups")
