@@ -18,7 +18,8 @@ Three layers of "traces", cheapest first:
    builds a dependency graph. Imports resolve both relative paths and **tsconfig /
    jsconfig path aliases** (`@/...`), so Next.js / NestJS monorepos get real edges.
    **PageRank** ranks the most important modules. Each file is hashed so changes
-   are detectable.
+   are detectable. Languages: Python, JavaScript / TypeScript (incl. JSX/TSX)
+   and Dart / Flutter.
 2. **Cached summaries** (the big saver) — as a chat understands a file, it calls
    `cerebro_record(path, summary)` to store a 1-3 sentence **English** summary
    (English tokenizes ~15-30% cheaper than Spanish). Future sessions reuse it.
@@ -131,4 +132,7 @@ Obsidian vault where imports are `[[links]]`), and architecture insights
 (`cerebro_callers` / `cerebro_calls`, tree-sitter name-resolved).
 Deferred to v2: a live file watcher, and LSP-backed call graph for type-precise
 resolution (the current call graph resolves by name).
-# cerebro-mcp
+
+## License
+
+MIT © 2026 Marco Toledo — see [LICENSE](LICENSE).
