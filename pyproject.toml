@@ -1,9 +1,12 @@
 [project]
-name = "cerebro"
+name = "cerebro-mcp"
 version = "0.1.0"
 description = "Persistent code-knowledge memory across AI chat sessions (MCP server)"
 readme = "README.md"
 requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Marco Toledo", email = "huancacori@gmail.com" }]
+keywords = ["mcp", "claude", "code-intelligence", "tree-sitter", "semantic-search", "sqlite"]
 dependencies = [
     "mcp>=1.2.0",
     "tree-sitter>=0.23",
@@ -14,6 +17,7 @@ dependencies = [
 
 [project.scripts]
 cerebro = "cerebro.cli:main"
+cerebro-mcp = "cerebro.server:main"
 cerebro-index = "cerebro.indexer:main"
 cerebro-map = "cerebro.server:map_main"
 cerebro-recall = "cerebro.server:recall_main"
@@ -22,6 +26,11 @@ cerebro-summarize = "cerebro.summarizer:main"
 cerebro-embed = "cerebro.embeddings:main"
 cerebro-graph = "cerebro.viz:graph_main"
 cerebro-export-obsidian = "cerebro.viz:obsidian_main"
+
+[project.urls]
+Homepage = "https://github.com/marcodavidd020/cerebro-mcp"
+Repository = "https://github.com/marcodavidd020/cerebro-mcp"
+Issues = "https://github.com/marcodavidd020/cerebro-mcp/issues"
 
 [project.optional-dependencies]
 semantic = ["model2vec>=0.3", "numpy>=1.26"]

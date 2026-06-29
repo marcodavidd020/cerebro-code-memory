@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "cerebro": {
+      "command": "uvx",
+      "args": ["cerebro-mcp"]
+    }
+  }
+}

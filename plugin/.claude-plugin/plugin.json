@@ -1,7 +1,10 @@
 {
   "name": "cerebro",
   "version": "0.1.0",
-  "description": "Persistent code-knowledge memory: auto-injects the project map at session start and keeps the index fresh as you edit. Pairs with the cerebro MCP server.",
-  "author": { "name": "cerebro" },
+  "description": "Persistent code-knowledge memory: an MCP brain that caches a codebase's structure and summaries so AI sessions query it instead of re-reading files. Bundles the MCP server, cerebro-first subagents, and session hooks.",
+  "author": { "name": "Marco Toledo", "url": "https://github.com/marcodavidd020/cerebro-mcp" },
+  "homepage": "https://github.com/marcodavidd020/cerebro-mcp",
+  "license": "MIT",
+  "mcpServers": "./.mcp.json",
   "hooks": "./hooks/hooks.json"
 }
