@@ -2,7 +2,7 @@
   "mcpServers": {
     "cerebro": {
       "command": "uvx",
-      "args": ["cerebro-mcp"]
+      "args": ["cerebro-code-memory"]
     }
   }
 }

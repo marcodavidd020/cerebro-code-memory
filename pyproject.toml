@@ -1,5 +1,5 @@
 [project]
-name = "cerebro-mcp"
+name = "cerebro-code-memory"
 version = "0.1.0"
 description = "Persistent code-knowledge memory across AI chat sessions (MCP server)"
 readme = "README.md"
@@ -17,7 +17,7 @@ dependencies = [
 
 [project.scripts]
 cerebro = "cerebro.cli:main"
-cerebro-mcp = "cerebro.server:main"
+cerebro-code-memory = "cerebro.server:main"
 cerebro-index = "cerebro.indexer:main"
 cerebro-map = "cerebro.server:map_main"
 cerebro-recall = "cerebro.server:recall_main"
