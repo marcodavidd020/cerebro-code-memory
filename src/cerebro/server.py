@@ -13,7 +13,7 @@ from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 
 from . import config as cfg
-from . import callgraph, db, embeddings, gitsync, graph, indexer, insights, notes, summaries, views
+from . import apiroutes, callgraph, db, embeddings, gitsync, graph, indexer, insights, notes, summaries, views
 
 mcp = FastMCP("cerebro")
 
@@ -354,6 +354,27 @@ def cerebro_dead_symbols(prefix: str = "") -> str:
     if r["total"] > 60:
         out.append(f"  … (+{r['total'] - 60} more)")
     out.append("\n(Heuristic: verify — dynamic/reflective access can hide a real use.)")
+    return "\n".join(out)
+
+
+@mcp.tool()
+def cerebro_endpoints(query: str = "") -> str:
+    """Backend HTTP endpoints (NestJS routes) the project exposes — the front↔back
+    boundary that `import` edges miss. Search by path / method / handler (e.g.
+    'POST carts', 'promotions', 'findActive') to answer 'where is this endpoint
+    handled?' without grepping decorators."""
+    config, conn = _ctx()
+    eps = apiroutes.find(config, conn, query)
+    if not eps:
+        scope = f" matching '{query}'" if query else ""
+        return f"No backend endpoints{scope} found (scans *.controller.ts NestJS routes)."
+    cap = 60
+    out = [f"{len(eps)} endpoint(s)" + (f" matching '{query}'" if query else "") + ":"]
+    for e in eps[:cap]:
+        h = f"  ({e['handler']})" if e["handler"] else ""
+        out.append(f"  {e['method']:6} {e['path']}  → {e['file']}:{e['line']}{h}")
+    if len(eps) > cap:
+        out.append(f"  … (+{len(eps) - cap} more)")
     return "\n".join(out)
 
 

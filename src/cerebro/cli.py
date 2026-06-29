@@ -93,6 +93,11 @@ def cmd_calls(args):
     print(_bind_server(config, conn).cerebro_calls(args.path))
 
 
+def cmd_endpoints(args):
+    config, conn = _ctx()
+    print(_bind_server(config, conn).cerebro_endpoints(" ".join(args.query)))
+
+
 def cmd_recall(args):
     from . import views
     config, conn = _ctx()
@@ -294,6 +299,7 @@ _COMMANDS = {
     "embed": cmd_embed, "impact": cmd_impact, "cycles": cmd_cycles, "orphans": cmd_orphans,
     "dead-symbols": cmd_orphans_symbols,
     "callers": cmd_callers, "calls": cmd_calls, "recall": cmd_recall,
+    "endpoints": cmd_endpoints,
 }
 
 
@@ -335,6 +341,7 @@ def _build_parser() -> argparse.ArgumentParser:
     s.add_argument("--prefix", default="")
     s = sub.add_parser("callers", help="call sites of a symbol"); s.add_argument("name")
     s = sub.add_parser("calls", help="internal calls a file makes"); s.add_argument("path")
+    s = sub.add_parser("endpoints", help="backend HTTP endpoints (NestJS routes)"); s.add_argument("query", nargs="*")
     s = sub.add_parser("recall", help="recall recorded decisions"); s.add_argument("query", nargs="*")
     return p
 
