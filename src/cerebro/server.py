@@ -96,7 +96,19 @@ def cerebro_get(path: str) -> str:
     out = [f"# {path}  ({file_row['lang'] or 'other'})"]
     abs_path = config.root / path
     live_hash = indexer.file_hash(abs_path) if abs_path.exists() else None
-    s = summaries.get(conn, path, current_hash=live_hash)
+    # Staleness is structural. Reuse the stored struct_hash when the bytes are
+    # unchanged (the common case — no parse); only re-parse when the file differs.
+    live_struct = None
+    if live_hash is not None:
+        if live_hash == file_row["hash"]:
+            live_struct = file_row["struct_hash"]
+        elif file_row["lang"]:
+            try:
+                syms_, imps_, _c, _r = indexer.extract(file_row["lang"], abs_path.read_bytes())
+                live_struct = indexer.structure_hash(syms_, imps_)
+            except OSError:
+                live_struct = None
+    s = summaries.get(conn, path, current_hash=live_hash, current_struct=live_struct)
     if s:
         flag = "  ⚠ STALE (file changed since summary)" if s["stale"] else ""
         out.append(f"\nSummary:{flag}\n{s['summary_en']}")

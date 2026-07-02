@@ -16,7 +16,11 @@ CREATE TABLE IF NOT EXISTS files (
     hash        TEXT NOT NULL,
     mtime       REAL,
     size        INTEGER,
-    indexed_at  TEXT NOT NULL
+    indexed_at  TEXT NOT NULL,
+    -- Fingerprint of the file's *shape* (symbol signatures + import specifiers),
+    -- not its bytes. Drives summary-staleness: a summary describes a file's ROLE,
+    -- which changes with structure, not with comments/whitespace/function bodies.
+    struct_hash TEXT
 );
 
 CREATE TABLE IF NOT EXISTS symbols (
@@ -65,6 +69,10 @@ CREATE TABLE IF NOT EXISTS summaries (
     summary_en  TEXT NOT NULL,
     model       TEXT,
     source_hash TEXT,
+    -- The file's struct_hash when this summary was written. Compared against
+    -- files.struct_hash to flag staleness; source_hash (bytes) is kept as a
+    -- latent fallback for brains written before struct_hash existed.
+    struct_hash TEXT,
     updated_at  TEXT NOT NULL
 );
 
@@ -128,19 +136,36 @@ def connect(db_path: Path) -> sqlite3.Connection:
     conn.execute("PRAGMA busy_timeout=5000")
     conn.execute("PRAGMA journal_mode=WAL")
     conn.executescript(SCHEMA)
+    _ensure_columns(conn)
     return conn
+
+
+def _ensure_columns(conn) -> None:
+    """Additive, idempotent migration for brains created before a column existed.
+    `CREATE TABLE IF NOT EXISTS` is a no-op on an existing table, so it never adds
+    a column to an already-created brain — this ALTERs in what's missing. Old rows
+    get the column as NULL, and every staleness path falls back to source_hash
+    until the file is reindexed / re-summarized, so existing brains keep working."""
+    for table, col, decl in (
+        ("files", "struct_hash", "TEXT"),
+        ("summaries", "struct_hash", "TEXT"),
+    ):
+        cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+        if col not in cols:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {decl}")
 
 
 # --- structural index writes -------------------------------------------------
 
-def upsert_file(conn, path, lang, file_hash, mtime, size, indexed_at):
+def upsert_file(conn, path, lang, file_hash, mtime, size, indexed_at, struct_hash=None):
     conn.execute(
-        """INSERT INTO files(path, lang, hash, mtime, size, indexed_at)
-           VALUES(?,?,?,?,?,?)
+        """INSERT INTO files(path, lang, hash, mtime, size, indexed_at, struct_hash)
+           VALUES(?,?,?,?,?,?,?)
            ON CONFLICT(path) DO UPDATE SET
              lang=excluded.lang, hash=excluded.hash, mtime=excluded.mtime,
-             size=excluded.size, indexed_at=excluded.indexed_at""",
-        (path, lang, file_hash, mtime, size, indexed_at),
+             size=excluded.size, indexed_at=excluded.indexed_at,
+             struct_hash=excluded.struct_hash""",
+        (path, lang, file_hash, mtime, size, indexed_at, struct_hash),
     )
 
 

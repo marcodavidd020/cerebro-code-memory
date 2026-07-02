@@ -56,6 +56,21 @@ def file_hash(path: Path) -> str:
     return h.hexdigest()
 
 
+def structure_hash(symbols, imports) -> str:
+    """Fingerprint of a file's *shape*, for summary-staleness. Hashes the symbol
+    signatures (kind+name+signature) and the raw import specifiers, each sorted so
+    reordering is a no-op. Deliberately ignores comments, whitespace and function
+    bodies (a 1-3 sentence role summary rarely changes with those) — that's the
+    token saving. It's a pure function of the file's own source (raw imports, not
+    resolved edges), so it never shifts because another file appeared or vanished.
+    `symbols` is (kind, name, line, signature); `imports` are extract()'s raw
+    descriptors."""
+    sigs = sorted(f"{k}\t{n}\t{sig or ''}" for (k, n, _ln, sig) in symbols)
+    imps = sorted(repr(i) for i in imports)
+    blob = "\n".join(sigs) + "\x00" + "\n".join(imps)
+    return hashlib.sha1(blob.encode("utf-8")).hexdigest()
+
+
 # --- disk diff ---------------------------------------------------------------
 
 def disk_state(config: cfg.Config) -> dict[str, str]:
@@ -722,10 +737,11 @@ def _index_one(config, conn, rel, file_hash_val, known, alias_configs, stamp, sr
             return
     lang = config.lang_for(rel)
     stat = abs_path.stat()
-    db.upsert_file(conn, rel, lang, file_hash_val, stat.st_mtime, stat.st_size, stamp)
     symbols, imports, calls, refs = ([], [], [], [])
     if lang:
         symbols, imports, calls, refs = extract(lang, src)
+    db.upsert_file(conn, rel, lang, file_hash_val, stat.st_mtime, stat.st_size, stamp,
+                   struct_hash=structure_hash(symbols, imports))
     db.replace_symbols(conn, rel, symbols)
     db.replace_edges(
         conn,

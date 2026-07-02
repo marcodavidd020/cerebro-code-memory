@@ -41,16 +41,18 @@ def test_run_records_generated_summaries(tmp_path, project, monkeypatch):
     assert summaries.get(conn, "a.py")["summary_en"] == "summary of a.py"
 
 
-def test_select_stale_finds_changed_summaries(tmp_path, project):
-    """A summary whose source file changed (edit + reindex) surfaces as a stale
-    candidate, so the SessionEnd auto-record can re-warm it."""
+def test_select_stale_finds_structurally_changed_summaries(tmp_path, project):
+    """A summary whose source file changed STRUCTURALLY (signature/imports — not just
+    the body) surfaces as a stale candidate, so the SessionEnd auto-record can
+    re-warm it. Body-only edits deliberately no longer count; see
+    test_symbol_staleness.py for the full staleness contract."""
     config, conn = project
     write(tmp_path, "x.py", "def a():\n    return 1\n")
     indexer.reindex(config, conn)
     summaries.record(conn, "x.py", "does a")
     assert summarizer.select_stale(conn, 10) == []  # fresh — not stale
 
-    write(tmp_path, "x.py", "def a():\n    return 2  # changed\n")
+    write(tmp_path, "x.py", "def a(x):\n    return x\n")  # signature changed
     indexer.reindex(config, conn)
     assert summarizer.select_stale(conn, 10) == ["x.py"]  # now stale
 
